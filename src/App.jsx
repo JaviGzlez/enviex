@@ -7,7 +7,6 @@ import {
   Mail,
   MapPin,
   Menu,
-  MessageCircle,
   Phone,
   Send,
   ShieldCheck,
@@ -19,6 +18,7 @@ import CookieBanner from "./components/CookieBanner.jsx";
 import { FacebookIcon, InstagramIcon, LinkedinIcon } from "./components/SocialIcons.jsx";
 import heroIllustration from "./assets/hero-illustration.svg";
 import WhatsAppQuickForm, { WhatsAppFab } from "./components/WhatsAppQuickForm.jsx";
+import WhatsAppIcon from "./components/WhatsAppIcon.jsx";
 
 const WHATSAPP_NUMBER = "34604895001";
 const PHONE_DISPLAY = "604 89 50 01";
@@ -35,6 +35,7 @@ export default function App() {
   const [sending, setSending] = useState(false);
   const [legalModal, setLegalModal] = useState(null);
   const [whatsappFormOpen, setWhatsappFormOpen] = useState(false);
+  const [whatsappFormMode, setWhatsappFormMode] = useState("particular");
   const [form, setForm] = useState({
     name: "",
     phone: "",
@@ -198,10 +199,13 @@ export default function App() {
             </a>
             <button
               type="button"
-              onClick={() => setWhatsappFormOpen(true)}
+              onClick={() => {
+                setWhatsappFormMode("particular");
+                setWhatsappFormOpen(true);
+              }}
               className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-7 py-4 text-base font-black text-[#092640] shadow-sm transition hover:-translate-y-0.5"
             >
-              Contactar por WhatsApp <MessageCircle size={19} className="text-[#25D366]" />
+              Contactar por WhatsApp <WhatsAppIcon size={19} className="text-[#25D366]" />
             </button>
           </div>
 
@@ -225,7 +229,7 @@ export default function App() {
           </div>
         </div>
 
-        <section id="solicitar" className="relative rounded-[2rem] border border-slate-200 bg-white p-5 shadow-2xl shadow-slate-200 md:p-7">
+        <section id="solicitar" className="relative scroll-mt-28 rounded-[2rem] border border-slate-200 bg-white p-5 shadow-2xl shadow-slate-200 md:p-7">
           <div className="mb-6 rounded-3xl bg-[#092640] p-5 text-white">
             <p className="text-sm font-black uppercase tracking-[0.18em] text-red-200">Solicitud rápida</p>
             <h2 className="mt-2 text-3xl font-black">Solicita tu envío en menos de un minuto</h2>
@@ -253,7 +257,7 @@ export default function App() {
                   rel="noreferrer"
                   className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-[#25D366] px-5 py-4 font-black text-white transition hover:bg-[#1ebc59]"
                 >
-                  Abrir WhatsApp <MessageCircle size={18} />
+                  Abrir WhatsApp <WhatsAppIcon size={18} className="text-white" />
                 </a>
                 <button
                   type="button"
@@ -351,7 +355,7 @@ export default function App() {
         </div>
       </section>
 
-      <section id="funciona" className="mx-auto max-w-[1680px] px-5 py-12 lg:px-10">
+      <section id="funciona" className="mx-auto max-w-[1680px] scroll-mt-28 px-5 py-12 lg:px-10">
         <div className="mb-10 flex flex-col justify-between gap-4 md:flex-row md:items-end">
           <div>
             <p className="font-black uppercase tracking-[0.18em] text-[#e50914]">Cómo funciona</p>
@@ -376,7 +380,7 @@ export default function App() {
         </div>
       </section>
 
-      <section id="empresas" className="mx-auto max-w-[1680px] px-5 py-12 lg:px-10">
+      <section id="empresas" className="mx-auto max-w-[1680px] scroll-mt-28 px-5 py-12 lg:px-10">
         <div className="grid gap-8 rounded-[2.5rem] bg-[#092640] p-8 text-white md:p-12 lg:grid-cols-[1fr_420px]">
           <div>
             <p className="font-black uppercase tracking-[0.18em] text-red-200">Para empresas</p>
@@ -399,22 +403,36 @@ export default function App() {
                 <CheckCircle2 className="text-[#e50914]" size={20} /> {item}
               </div>
             ))}
-            <a href={`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent("Hola Enviex, quiero información para una cuenta de empresa.")}`} target="_blank" rel="noreferrer" className="mt-5 flex items-center justify-center gap-2 rounded-2xl bg-[#e50914] px-5 py-4 font-black text-white">
+            <button
+              type="button"
+              onClick={() => {
+                setWhatsappFormMode("empresa");
+                setWhatsappFormOpen(true);
+              }}
+              className="mt-5 flex w-full items-center justify-center gap-2 rounded-2xl bg-[#e50914] px-5 py-4 font-black text-white transition hover:-translate-y-0.5"
+            >
               Solicitar cuenta empresa <Building2 size={18} />
-            </a>
+            </button>
           </div>
         </div>
       </section>
 
-      <section id="contacto" className="mx-auto max-w-[1680px] px-5 py-12 lg:px-10">
+      <section id="contacto" className="mx-auto max-w-[1680px] scroll-mt-28 px-5 py-12 lg:px-10">
         <div className="grid gap-4 md:grid-cols-3">
           <a href={`tel:${PHONE_LINK}`} className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-0.5">
             <Phone className="mb-4 text-[#e50914]" />
             <h3 className="font-black">Teléfono</h3>
             <p className="mt-2 text-slate-600">{PHONE_DISPLAY}</p>
           </a>
-          <button type="button" onClick={() => setWhatsappFormOpen(true)} className="rounded-3xl border border-slate-200 bg-white p-6 text-left shadow-sm transition hover:-translate-y-0.5">
-            <MessageCircle className="mb-4 text-[#25D366]" />
+          <button
+            type="button"
+            onClick={() => {
+              setWhatsappFormMode("particular");
+              setWhatsappFormOpen(true);
+            }}
+            className="rounded-3xl border border-slate-200 bg-white p-6 text-left shadow-sm transition hover:-translate-y-0.5"
+          >
+            <WhatsAppIcon className="mb-4 text-[#25D366]" size={24} />
             <h3 className="font-black">WhatsApp</h3>
             <p className="mt-2 text-slate-600">Respuesta rápida</p>
           </button>
@@ -469,8 +487,14 @@ export default function App() {
         open={whatsappFormOpen}
         onClose={() => setWhatsappFormOpen(false)}
         onOpenPrivacy={() => setLegalModal("privacidad")}
+        defaultMode={whatsappFormMode}
       />
-      <WhatsAppFab onClick={() => setWhatsappFormOpen(true)} />
+      <WhatsAppFab
+        onClick={() => {
+          setWhatsappFormMode("particular");
+          setWhatsappFormOpen(true);
+        }}
+      />
     </main>
   );
 }
