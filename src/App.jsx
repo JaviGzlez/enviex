@@ -146,11 +146,9 @@ export default function App() {
           <div className="hidden items-center gap-3 md:flex">
             <a
               href={`tel:${PHONE_LINK}`}
-              className="group relative inline-flex items-center gap-2 rounded-full bg-[#e50914] px-5 py-3 text-sm font-black text-white"
+              className="inline-flex items-center gap-2 rounded-full bg-[#e50914] px-5 py-3 text-sm font-black text-white"
             >
-              <span className="absolute inset-0 rounded-full bg-[#e50914] opacity-60 animate-ping" />
-              <Phone size={17} className="relative animate-[wa-bounce_2.4s_ease-in-out_infinite]" />
-              <span className="relative">{PHONE_DISPLAY}</span>
+              <Phone size={17} /> {PHONE_DISPLAY}
             </a>
             <a href="#solicitar" className="inline-flex items-center gap-2 rounded-full bg-[#092640] px-5 py-3 text-sm font-black text-white shadow-xl shadow-slate-300 transition hover:-translate-y-0.5">
               Solicitar envío <ArrowRight size={16} />
