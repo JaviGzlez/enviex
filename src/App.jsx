@@ -4,9 +4,6 @@ import {
   Building2,
   CheckCircle2,
   Clock,
-  Facebook,
-  Instagram,
-  Linkedin,
   Mail,
   MapPin,
   Menu,
@@ -19,6 +16,7 @@ import {
 } from "lucide-react";
 import LegalModal from "./components/LegalModal.jsx";
 import CookieBanner from "./components/CookieBanner.jsx";
+import { FacebookIcon, InstagramIcon, LinkedinIcon } from "./components/SocialIcons.jsx";
 
 const WHATSAPP_NUMBER = "34604895001";
 const PHONE_DISPLAY = "604 89 50 01";
@@ -424,13 +422,13 @@ export default function App() {
             <p className="mt-3 text-sm font-bold text-slate-400">Más tiempo para ti.</p>
             <div className="mt-4 flex items-center gap-3">
               <a href={INSTAGRAM_URL} target="_blank" rel="noreferrer" aria-label="Instagram" className="rounded-full bg-white/10 p-2 transition hover:bg-[#e50914]">
-                <Instagram size={18} />
+                <InstagramIcon size={18} />
               </a>
               <a href={FACEBOOK_URL} target="_blank" rel="noreferrer" aria-label="Facebook" className="rounded-full bg-white/10 p-2 transition hover:bg-[#e50914]">
-                <Facebook size={18} />
+                <FacebookIcon size={18} />
               </a>
               <a href={LINKEDIN_URL} target="_blank" rel="noreferrer" aria-label="LinkedIn" className="rounded-full bg-white/10 p-2 transition hover:bg-[#e50914]">
-                <Linkedin size={18} />
+                <LinkedinIcon size={18} />
               </a>
             </div>
           </div>
