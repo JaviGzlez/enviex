@@ -17,6 +17,7 @@ import {
 import LegalModal from "./components/LegalModal.jsx";
 import CookieBanner from "./components/CookieBanner.jsx";
 import { FacebookIcon, InstagramIcon, LinkedinIcon } from "./components/SocialIcons.jsx";
+import heroIllustration from "./assets/hero-illustration.svg";
 
 const WHATSAPP_NUMBER = "34604895001";
 const PHONE_DISPLAY = "604 89 50 01";
@@ -125,9 +126,9 @@ export default function App() {
   return (
     <main className="min-h-screen overflow-hidden bg-[#f6f8fb] text-[#092640]">
       <header className="fixed left-0 right-0 top-0 z-50 border-b border-slate-200/70 bg-white/90 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-4">
+        <div className="mx-auto flex max-w-[1440px] items-center justify-between px-5 py-4 lg:px-10">
           <a href="#inicio" className="flex items-center gap-3">
-            <img src="/logo-enviex.png" alt="Enviex" className="h-12 w-auto object-contain" />
+            <img src="/logo-enviex.png" alt="Enviex" className="h-16 w-auto object-contain md:h-20" />
             <span className="hidden text-xs font-black uppercase tracking-[0.22em] text-slate-400 lg:block">
               Más tiempo para ti
             </span>
@@ -140,10 +141,10 @@ export default function App() {
           </nav>
 
           <div className="hidden items-center gap-3 md:flex">
-            <a href={`tel:${PHONE_LINK}`} className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-4 py-2 text-sm font-black text-[#092640]">
+            <a href={`tel:${PHONE_LINK}`} className="inline-flex items-center gap-2 rounded-full bg-[#e50914] px-4 py-2 text-sm font-black text-white">
               <Phone size={16} /> {PHONE_DISPLAY}
             </a>
-            <a href={`https://wa.me/${WHATSAPP_NUMBER}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-full bg-[#092640] px-5 py-3 text-sm font-black text-white shadow-xl shadow-slate-300 transition hover:-translate-y-0.5">
+            <a href={`https://wa.me/${WHATSAPP_NUMBER}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-full bg-[#25D366] px-5 py-3 text-sm font-black text-white shadow-xl shadow-green-200 transition hover:-translate-y-0.5 hover:bg-[#1ebc59]">
               <MessageCircle size={17} /> WhatsApp
             </a>
           </div>
@@ -171,7 +172,7 @@ export default function App() {
         </div>
       )}
 
-      <section id="inicio" className="relative mx-auto grid max-w-7xl gap-10 px-5 pb-16 pt-32 lg:grid-cols-[1fr_440px] lg:pb-24 lg:pt-40 xl:grid-cols-[1fr_520px]">
+      <section id="inicio" className="relative mx-auto grid max-w-[1440px] gap-10 px-5 pb-16 pt-36 lg:grid-cols-[1fr_440px] lg:px-10 lg:pb-24 lg:pt-44 xl:grid-cols-[1fr_520px]">
         <div className="absolute -right-32 top-24 h-96 w-96 rounded-full bg-red-100/60 blur-3xl" />
         <div className="absolute -left-32 top-60 h-96 w-96 rounded-full bg-blue-100/70 blur-3xl" />
 
@@ -193,7 +194,7 @@ export default function App() {
             <a href="#solicitar" className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#e50914] px-7 py-4 text-base font-black text-white shadow-xl shadow-red-200 transition hover:-translate-y-0.5">
               Solicitar envío <ArrowRight size={19} />
             </a>
-            <a href={`https://wa.me/${WHATSAPP_NUMBER}`} target="_blank" rel="noreferrer" className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-7 py-4 text-base font-black text-[#092640] shadow-sm transition hover:-translate-y-0.5">
+            <a href={`https://wa.me/${WHATSAPP_NUMBER}`} target="_blank" rel="noreferrer" className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#25D366] px-7 py-4 text-base font-black text-white shadow-xl shadow-green-200 transition hover:-translate-y-0.5 hover:bg-[#1ebc59]">
               Contactar por WhatsApp <MessageCircle size={19} />
             </a>
           </div>
@@ -211,6 +212,10 @@ export default function App() {
                 <p className="mt-1 text-sm text-slate-500">{text}</p>
               </div>
             ))}
+          </div>
+
+          <div className="relative mt-10 hidden overflow-hidden rounded-[2rem] shadow-xl shadow-slate-200 lg:block">
+            <img src={heroIllustration} alt="Reparto Enviex" className="h-64 w-full object-cover xl:h-72" />
           </div>
         </div>
 
@@ -240,7 +245,7 @@ export default function App() {
                   href={whatsappUrl}
                   target="_blank"
                   rel="noreferrer"
-                  className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-green-600 px-5 py-4 font-black text-white transition hover:opacity-90"
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-[#25D366] px-5 py-4 font-black text-white transition hover:bg-[#1ebc59]"
                 >
                   Abrir WhatsApp <MessageCircle size={18} />
                 </a>
@@ -328,7 +333,7 @@ export default function App() {
         </section>
       </section>
 
-      <section className="mx-auto max-w-7xl px-5 py-10">
+      <section className="mx-auto max-w-[1440px] px-5 py-10 lg:px-10">
         <div className="rounded-[2.5rem] bg-white p-8 shadow-sm md:p-12">
           <h2 className="max-w-4xl text-4xl font-black tracking-tight md:text-5xl">
             Hay cosas más importantes que cruzar la ciudad para entregar un paquete.
@@ -340,7 +345,7 @@ export default function App() {
         </div>
       </section>
 
-      <section id="funciona" className="mx-auto max-w-7xl px-5 py-12">
+      <section id="funciona" className="mx-auto max-w-[1440px] px-5 py-12 lg:px-10">
         <div className="mb-10 flex flex-col justify-between gap-4 md:flex-row md:items-end">
           <div>
             <p className="font-black uppercase tracking-[0.18em] text-[#e50914]">Cómo funciona</p>
@@ -365,7 +370,7 @@ export default function App() {
         </div>
       </section>
 
-      <section id="empresas" className="mx-auto max-w-7xl px-5 py-12">
+      <section id="empresas" className="mx-auto max-w-[1440px] px-5 py-12 lg:px-10">
         <div className="grid gap-8 rounded-[2.5rem] bg-[#092640] p-8 text-white md:p-12 lg:grid-cols-[1fr_420px]">
           <div>
             <p className="font-black uppercase tracking-[0.18em] text-red-200">Para empresas</p>
@@ -395,7 +400,7 @@ export default function App() {
         </div>
       </section>
 
-      <section id="contacto" className="mx-auto max-w-7xl px-5 py-12">
+      <section id="contacto" className="mx-auto max-w-[1440px] px-5 py-12 lg:px-10">
         <div className="grid gap-4 md:grid-cols-3">
           <a href={`tel:${PHONE_LINK}`} className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-0.5">
             <Phone className="mb-4 text-[#e50914]" />
@@ -415,8 +420,8 @@ export default function App() {
         </div>
       </section>
 
-      <footer className="bg-[#06192d] px-5 py-10 text-white">
-        <div className="mx-auto flex max-w-7xl flex-col gap-8 md:flex-row md:items-center md:justify-between">
+      <footer className="bg-[#06192d] px-5 py-10 text-white lg:px-10">
+        <div className="mx-auto flex max-w-[1440px] flex-col gap-8 md:flex-row md:items-center md:justify-between">
           <div>
             <img src="/logo-enviex.png" alt="Enviex" className="h-16 rounded-2xl bg-white p-2" />
             <p className="mt-3 text-sm font-bold text-slate-400">Más tiempo para ti.</p>
