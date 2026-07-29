@@ -31,6 +31,10 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// A donde debe llevar el enlace del email una vez aceptada la invitacion
+// (nunca localhost, siempre la web real)
+const SITE_URL = "https://www.enviex.es";
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -67,7 +71,9 @@ Deno.serve(async (req) => {
         return json({ error: "Datos incompletos" }, 400);
       }
 
-      const { data: invited, error: inviteError } = await adminClient.auth.admin.inviteUserByEmail(email);
+const { data: invited, error: inviteError } = await adminClient.auth.admin.inviteUserByEmail(email, {
+        redirectTo: `${SITE_URL}/crm/login`,
+      });
       if (inviteError) return json({ error: inviteError.message }, 400);
 
       const { error: profileError } = await adminClient.from("profiles").insert({
@@ -86,7 +92,9 @@ Deno.serve(async (req) => {
       const { company_id, email } = body;
       if (!company_id || !email) return json({ error: "Datos incompletos" }, 400);
 
-      const { data: invited, error: inviteError } = await adminClient.auth.admin.inviteUserByEmail(email);
+const { data: invited, error: inviteError } = await adminClient.auth.admin.inviteUserByEmail(email, {
+        redirectTo: `${SITE_URL}/crm/login`,
+      });
       if (inviteError) return json({ error: inviteError.message }, 400);
 
       const { error: updateError } = await adminClient

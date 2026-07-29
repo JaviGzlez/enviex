@@ -23,7 +23,7 @@ export default function UsuariosPage() {
 
   const sendPasswordReset = async (u) => {
     const { error } = await supabase.auth.resetPasswordForEmail(u.email, {
-      redirectTo: `${window.location.origin}/crm/login`,
+      redirectTo: "https://www.enviex.es/crm/login",
     });
     if (error) {
       setNotice(`No se pudo enviar la recuperación a ${u.email}: ${error.message}`);

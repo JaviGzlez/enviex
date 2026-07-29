@@ -2,6 +2,7 @@ import React from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "./AuthContext.jsx";
 import LoginPage from "./pages/LoginPage.jsx";
+import SetPasswordPage from "./pages/SetPasswordPage.jsx";
 import DashboardLayout from "./DashboardLayout.jsx";
 import EnviosPage from "./pages/EnviosPage.jsx";
 import EmpresasPage from "./pages/EmpresasPage.jsx";
@@ -18,6 +19,20 @@ function RequireAuth({ children }) {
 }
 
 export default function CrmApp() {
+  // Cuando alguien acepta una invitación o pide recuperar contraseña, Supabase
+  // le trae de vuelta con esto en la URL: hay que mostrarle "crea tu contraseña"
+  // en vez del login normal.
+  const hash = window.location.hash || "";
+  const isInviteOrRecovery = hash.includes("type=invite") || hash.includes("type=recovery");
+
+  if (isInviteOrRecovery) {
+    return (
+      <AuthProvider>
+        <SetPasswordPage />
+      </AuthProvider>
+    );
+  }
+
   return (
     <AuthProvider>
       <Routes>
