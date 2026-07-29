@@ -1,0 +1,328 @@
+// Edge Function: generate-monthly-invoices
+// Pensada para ejecutarse automáticamente el día 1 de cada mes (vía Cron Job de Supabase).
+// También se puede llamar a mano para probar — es segura de repetir: una empresa ya
+// facturada no vuelve a facturarse (sus envíos ya no tienen invoice_id = null).
+
+import { createClient } from "npm:@supabase/supabase-js@2";
+import { PDFDocument, rgb, StandardFonts } from "npm:pdf-lib@1.17.1";
+import qrcodegen from "npm:qrcode-generator@1.4.4";
+
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
+const SERVICE_ROLE_KEY = getServiceRoleKey();
+const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
+
+function getServiceRoleKey() {
+  const legacy = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  if (legacy) return legacy;
+  const dict = Deno.env.get("SUPABASE_SECRET_KEYS");
+  if (dict) {
+    try {
+      const parsed = JSON.parse(dict);
+      return parsed.default || Object.values(parsed)[0];
+    } catch {
+      return null;
+    }
+  }
+  return null;
+}
+const EMISOR = {
+  nombre: "José Carlos Ortiz Cervera (Enviex)",
+  nif: "32056045W",
+  direccion: "Calle Higueras, 3, 11402 Jerez de la Frontera, Cádiz",
+  email: "operativa@enviex.es",
+};
+const IVA_RATE = 0.21;
+
+Deno.serve(async (_req) => {
+  const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
+
+  // Periodo: el mes natural anterior a hoy
+  const now = new Date();
+  const periodStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const periodEnd = new Date(now.getFullYear(), now.getMonth(), 0);
+  const periodStartStr = toISODate(periodStart);
+  const periodEndStr = toISODate(periodEnd);
+
+  const { data: companies } = await supabase
+    .from("companies")
+    .select("id, name, nif_cif, fiscal_address, email")
+    .eq("active", true);
+
+  const results = [];
+
+  for (const company of companies || []) {
+    const { data: shipments } = await supabase
+      .from("shipments")
+      .select("id, shipment_date, service_type, concept, price")
+      .eq("company_id", company.id)
+      .is("invoice_id", null)
+      .lte("shipment_date", periodEndStr);
+
+    if (!shipments || shipments.length === 0) continue;
+
+    const subtotal = round2(shipments.reduce((sum, s) => sum + Number(s.price), 0));
+    const ivaAmount = round2(subtotal * IVA_RATE);
+    const total = round2(subtotal + ivaAmount);
+
+    // Numeración correlativa segura (evita huecos y repeticiones).
+    // Esta función se ejecuta una sola vez al mes de forma programada, así que
+    // no hay riesgo de que dos procesos pidan número a la vez.
+    const { data: seq } = await supabase
+      .from("invoice_sequences")
+      .select("next_number")
+      .eq("series", "A")
+      .maybeSingle();
+
+    const currentNumber = seq?.next_number ?? 1;
+    await supabase.from("invoice_sequences").update({ next_number: currentNumber + 1 }).eq("series", "A");
+    const number = `${now.getFullYear()}-${String(currentNumber).padStart(5, "0")}`;
+
+    // Hash encadenado con la última factura emitida (de cualquier empresa)
+    const { data: lastInvoice } = await supabase
+      .from("invoices")
+      .select("hash")
+      .order("issued_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    const previousHash = lastInvoice?.hash || "GENESIS";
+
+    const issuedAt = toISODate(now);
+    const hashInput = `${EMISOR.nif}|A-${number}|${issuedAt}|${total}|${previousHash}`;
+    const hash = await sha256Hex(hashInput);
+
+    const qrData = `NIF:${EMISOR.nif};NUM:A-${number};FECHA:${issuedAt};TOTAL:${total};HASH:${hash.slice(0, 16)}`;
+
+    const pdfBytes = await buildInvoicePdf({
+      number, issuedAt, periodStartStr, periodEndStr,
+      company, shipments, subtotal, ivaAmount, total,
+      hash, previousHash, qrData,
+    });
+
+    const path = `${company.id}/A-${number}.pdf`;
+    await supabase.storage.from("invoices").upload(path, pdfBytes, {
+      contentType: "application/pdf",
+      upsert: true,
+    });
+
+    const { data: invoice } = await supabase
+      .from("invoices")
+      .insert({
+        series: "A",
+        number,
+        company_id: company.id,
+        period_start: periodStartStr,
+        period_end: periodEndStr,
+        subtotal, iva_rate: IVA_RATE, iva_amount: ivaAmount, total,
+        status: "issued",
+        hash, previous_hash: previousHash,
+        qr_data: qrData,
+        pdf_url: path,
+      })
+      .select()
+      .single();
+
+    await supabase.from("invoice_lines").insert(
+      shipments.map((s) => ({
+        invoice_id: invoice.id,
+        shipment_id: s.id,
+        description: s.concept ? `${s.service_type} — ${s.concept}` : s.service_type,
+        price: s.price,
+      }))
+    );
+
+    await supabase.from("shipments").update({ invoice_id: invoice.id }).in("id", shipments.map((s) => s.id));
+
+    await supabase.from("event_log").insert({
+      event_type: "invoice_issued",
+      entity_type: "invoice",
+      entity_id: invoice.id,
+      details: { company: company.name, total },
+      hash,
+      previous_hash: previousHash,
+    });
+
+    if (RESEND_API_KEY) {
+      await sendInvoiceEmail(company, number, total, pdfBytes);
+    }
+
+    results.push({ company: company.name, number, total });
+  }
+
+  return new Response(JSON.stringify({ ok: true, generated: results }), {
+    headers: { "Content-Type": "application/json" },
+  });
+});
+
+function round2(n) {
+  return Math.round(n * 100) / 100;
+}
+
+function toISODate(d) {
+  return d.toISOString().slice(0, 10);
+}
+
+async function sha256Hex(text) {
+  const data = new TextEncoder().encode(text);
+  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+  return Array.from(new Uint8Array(hashBuffer)).map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+function bytesToBase64(bytes) {
+  let binary = "";
+  const chunkSize = 0x8000; // trozos de 32KB para no reventar el límite de argumentos
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    binary += String.fromCharCode.apply(null, bytes.subarray(i, i + chunkSize));
+  }
+  return btoa(binary);
+}
+
+async function sendInvoiceEmail(company, number, total, pdfBytes) {
+  const base64 = bytesToBase64(pdfBytes);
+  await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${RESEND_API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      from: "Enviex <facturas@enviex.es>",
+      to: company.email,
+      subject: `Factura Enviex A-${number}`,
+      html: `<p>Hola,</p><p>Adjuntamos la factura de vuestros envíos del mes pasado. Total: <strong>${total} €</strong>.</p><p>También puedes consultarla en tu portal de Enviex.</p>`,
+      attachments: [{ filename: `factura-A-${number}.pdf`, content: base64 }],
+    }),
+  });
+}
+
+async function buildInvoicePdf({ number, issuedAt, periodStartStr, periodEndStr, company, shipments, subtotal, ivaAmount, total, hash, previousHash, qrData }) {
+  const doc = await PDFDocument.create();
+  const page = doc.addPage([595.28, 841.89]); // A4
+  const font = await doc.embedFont(StandardFonts.Helvetica);
+  const bold = await doc.embedFont(StandardFonts.HelveticaBold);
+  const NAVY = rgb(9 / 255, 38 / 255, 64 / 255);
+  const GRAY = rgb(0.37, 0.36, 0.35);
+  const LIGHT = rgb(241 / 255, 239 / 255, 232 / 255);
+
+  // Logo real de Enviex (mismo que en la web)
+  let logoImage = null;
+  try {
+    const logoBytes = await fetch("https://www.enviex.es/logo-enviex.png").then((r) => r.arrayBuffer());
+    logoImage = await doc.embedPng(logoBytes);
+  } catch {
+    // Si por lo que sea no se puede descargar el logo, seguimos sin él en vez de romper la factura
+  }
+
+  let y = 800;
+
+  if (logoImage) {
+    const logoSize = 55;
+    page.drawImage(logoImage, { x: 40, y: y - logoSize + 15, width: logoSize, height: logoSize });
+  } else {
+    page.drawText("enviex", { x: 40, y, size: 22, font: bold, color: NAVY });
+  }
+
+  page.drawText("FACTURA", { x: 460, y, size: 16, font: bold, color: NAVY });
+  page.drawText(`Nº A-${number}`, { x: 460, y: y - 16, size: 9.5, font, color: GRAY });
+  page.drawText(`Fecha: ${issuedAt}`, { x: 460, y: y - 29, size: 9.5, font, color: GRAY });
+  page.drawLine({ start: { x: 40, y: y - 40 }, end: { x: 555, y: y - 40 }, thickness: 1, color: NAVY });
+
+  y -= 65;
+  page.drawText("EMISOR", { x: 40, y, size: 9, font: bold, color: NAVY });
+  page.drawText("CLIENTE", { x: 310, y, size: 9, font: bold, color: NAVY });
+  const emisorLines = [EMISOR.nombre, `NIF: ${EMISOR.nif}`, EMISOR.direccion, EMISOR.email];
+  const clienteLines = [company.name, `NIF: ${company.nif_cif}`, company.fiscal_address];
+  emisorLines.forEach((line, i) => page.drawText(line, { x: 40, y: y - 15 - i * 13, size: 9, font, color: rgb(0, 0, 0) }));
+  clienteLines.forEach((line, i) => page.drawText(line, { x: 310, y: y - 15 - i * 13, size: 9, font, color: rgb(0, 0, 0) }));
+
+  y -= 95;
+  page.drawText(`Periodo facturado: ${periodStartStr} - ${periodEndStr}`, { x: 40, y, size: 9, font, color: GRAY });
+
+  y -= 25;
+  const cols = [40, 100, 220, 375, 415, 470];
+  page.drawRectangle({ x: 40, y: y - 5, width: 515, height: 20, color: NAVY });
+  ["Fecha", "Tipo de envío", "Concepto", "Cant.", "Precio/ud.", "Importe"].forEach((h, i) =>
+    page.drawText(h, { x: cols[i] + 4, y: y, size: 8, font: bold, color: rgb(1, 1, 1) })
+  );
+
+  // Agrupamos por fecha + tipo de envío + concepto, para desglosar bien la factura
+  const grouped = {};
+  shipments.forEach((s) => {
+    const key = `${s.shipment_date}|${s.service_type}|${s.concept || ""}`;
+    grouped[key] = grouped[key] || { date: s.shipment_date, type: s.service_type, concept: s.concept || "—", count: 0, total: 0, unit: s.price };
+    grouped[key].count += 1;
+    grouped[key].total += Number(s.price);
+  });
+
+  y -= 20;
+  const rowHeight = 20;
+  Object.values(grouped)
+    .sort((a, b) => a.date.localeCompare(b.date))
+    .forEach((g, i) => {
+      if (i % 2 === 0) {
+        page.drawRectangle({ x: 40, y: y - 5, width: 515, height: rowHeight, color: LIGHT });
+      }
+      page.drawText(formatDate(g.date), { x: cols[0] + 4, y, size: 8, font });
+      page.drawText(truncate(g.type, 18), { x: cols[1] + 4, y, size: 8, font });
+      page.drawText(truncate(g.concept, 24), { x: cols[2] + 4, y, size: 8, font, color: GRAY });
+      page.drawText(String(g.count), { x: cols[3] + 4, y, size: 8, font });
+      page.drawText(`${Number(g.unit).toFixed(2)} €`, { x: cols[4] + 4, y, size: 8, font });
+      page.drawText(`${g.total.toFixed(2)} €`, { x: cols[5] + 4, y, size: 8, font });
+      y -= rowHeight;
+    });
+
+  y -= 10;
+  page.drawLine({ start: { x: 40, y: y + rowHeight - 5 }, end: { x: 555, y: y + rowHeight - 5 }, thickness: 0.5, color: rgb(0.83, 0.82, 0.78) });
+
+  y -= 10;
+  page.drawText("Subtotal:", { x: 400, y, size: 9.5, font });
+  page.drawText(`${subtotal.toFixed(2)} €`, { x: 480, y, size: 9.5, font });
+  y -= 15;
+  page.drawText("IVA (21%):", { x: 400, y, size: 9.5, font });
+  page.drawText(`${ivaAmount.toFixed(2)} €`, { x: 480, y, size: 9.5, font });
+  y -= 22;
+  page.drawRectangle({ x: 370, y: y - 4, width: 185, height: 22, color: NAVY });
+  page.drawText("TOTAL:", { x: 400, y: y + 2, size: 11, font: bold, color: rgb(1, 1, 1) });
+  page.drawText(`${total.toFixed(2)} €`, { x: 480, y: y + 2, size: 11, font: bold, color: rgb(1, 1, 1) });
+
+  // Bloque de QR + huella: siempre pegado a la parte baja de la página,
+  // con el mismo margen que el resto del documento (no depende de cuántas líneas tenga la tabla)
+  const footerTop = 190;
+  const qrSize = 70;
+  const qr = qrcodegen(0, "M");
+  qr.addData(qrData);
+  qr.make();
+  const moduleCount = qr.getModuleCount();
+  const cell = qrSize / moduleCount;
+  for (let row = 0; row < moduleCount; row++) {
+    for (let col = 0; col < moduleCount; col++) {
+      if (qr.isDark(row, col)) {
+        page.drawRectangle({
+          x: 40 + col * cell,
+          y: footerTop - qrSize - row * cell,
+          width: cell,
+          height: cell,
+          color: rgb(0, 0, 0),
+        });
+      }
+    }
+  }
+
+  page.drawText("Registro de facturación seguro (Reglamento RD 1007/2023)", { x: 125, y: footerTop - 15, size: 8.5, font: bold, color: NAVY });
+  page.drawText(`Huella (hash): ${hash.slice(0, 40)}...`, { x: 125, y: footerTop - 29, size: 7.5, font, color: GRAY });
+  page.drawText(`Huella anterior: ${previousHash === "GENESIS" ? "— (primera factura)" : previousHash.slice(0, 40) + "..."}`, { x: 125, y: footerTop - 41, size: 7.5, font, color: GRAY });
+  page.drawText("Modalidad: No VERI*FACTU · registros disponibles a petición de la AEAT", { x: 125, y: footerTop - 53, size: 7.5, font, color: GRAY });
+
+  page.drawText(`Enviex · ${EMISOR.direccion} · ${EMISOR.email}`, { x: 150, y: 40, size: 7.5, font, color: GRAY });
+
+  return doc.save();
+}
+
+function formatDate(isoDate) {
+  const [year, month, day] = isoDate.split("-");
+  return `${day}/${month}/${year}`;
+}
+
+function truncate(text, max) {
+  if (!text) return "";
+  return text.length > max ? text.slice(0, max - 1) + "…" : text;
+}

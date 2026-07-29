@@ -1,6 +1,6 @@
 import React from "react";
 import { NavLink, Outlet, Navigate } from "react-router-dom";
-import { Building2, FileText, LogOut, Truck, Users } from "lucide-react";
+import { Building2, FileText, LogOut, Tags, Truck, Users } from "lucide-react";
 import { useAuth } from "./AuthContext.jsx";
 
 const navItemClass = ({ isActive }) =>
@@ -31,6 +31,9 @@ export default function DashboardLayout() {
             </NavLink>
             <NavLink to="/crm/empresas" className={navItemClass}>
               <Building2 size={18} /> Empresas
+            </NavLink>
+            <NavLink to="/crm/tarifas" className={navItemClass}>
+              <Tags size={18} /> Tarifas
             </NavLink>
             <NavLink to="/crm/facturas" className={navItemClass}>
               <FileText size={18} /> Facturas

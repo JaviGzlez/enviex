@@ -21,7 +21,7 @@ export default function ClientPortalPage() {
     if (!company) return;
     supabase
       .from("shipments")
-      .select("shipment_date, service_type, price")
+      .select("shipment_date, service_type, concept, price")
       .eq("company_id", company.id)
       .gte("shipment_date", from)
       .lte("shipment_date", to)
@@ -64,12 +64,12 @@ export default function ClientPortalPage() {
           </div>
         </div>
         <div className="mb-6 overflow-hidden rounded-2xl border border-slate-200 bg-white">
-          <div className="grid grid-cols-[1fr_1.4fr_0.8fr] bg-slate-50 px-4 py-2 text-xs font-bold text-slate-400">
-            <div>Fecha</div><div>Tipo de envío</div><div>Precio</div>
+          <div className="grid grid-cols-[1fr_1.1fr_1.1fr_0.8fr] bg-slate-50 px-4 py-2 text-xs font-bold text-slate-400">
+            <div>Fecha</div><div>Tipo de envío</div><div>Concepto</div><div>Precio</div>
           </div>
           {shipments.map((s, i) => (
-            <div key={i} className="grid grid-cols-[1fr_1.4fr_0.8fr] border-t border-slate-100 px-4 py-3 text-sm">
-              <div>{s.shipment_date}</div><div>{s.service_type}</div><div>{Number(s.price).toFixed(2)} €</div>
+            <div key={i} className="grid grid-cols-[1fr_1.1fr_1.1fr_0.8fr] border-t border-slate-100 px-4 py-3 text-sm">
+              <div>{s.shipment_date}</div><div>{s.service_type}</div><div className="text-slate-500">{s.concept || "—"}</div><div>{Number(s.price).toFixed(2)} €</div>
             </div>
           ))}
           {shipments.length === 0 && <div className="px-4 py-8 text-center text-sm text-slate-400">No hay envíos en este rango de fechas.</div>}
@@ -86,9 +86,7 @@ export default function ClientPortalPage() {
               <div>{inv.series}-{inv.number}</div>
               <div>{Number(inv.total).toFixed(2)} €</div>
               <div>
-                {inv.pdf_url ? (
-                  <a href={inv.pdf_url} target="_blank" rel="noreferrer" className="font-bold text-[#092640] underline">PDF</a>
-                ) : "-"}
+                <button onClick={() => downloadInvoice(inv.pdf_url)} className="font-bold text-[#092640] underline">PDF</button>
               </div>
             </div>
           ))}
@@ -97,4 +95,13 @@ export default function ClientPortalPage() {
       </div>
     </div>
   );
+}
+
+async function downloadInvoice(path) {
+  const { data, error } = await supabase.storage.from("invoices").createSignedUrl(path, 60);
+  if (error || !data) {
+    alert("No se pudo generar el enlace de descarga.");
+    return;
+  }
+  window.open(data.signedUrl, "_blank", "noreferrer");
 }

@@ -5,6 +5,7 @@ import LoginPage from "./pages/LoginPage.jsx";
 import DashboardLayout from "./DashboardLayout.jsx";
 import EnviosPage from "./pages/EnviosPage.jsx";
 import EmpresasPage from "./pages/EmpresasPage.jsx";
+import TarifasPage from "./pages/TarifasPage.jsx";
 import FacturasPage from "./pages/FacturasPage.jsx";
 import UsuariosPage from "./pages/UsuariosPage.jsx";
 import ClientPortalPage from "./pages/ClientPortalPage.jsx";
@@ -39,6 +40,7 @@ export default function CrmApp() {
         >
           <Route index element={<EnviosPage />} />
           <Route path="empresas" element={<EmpresasPage />} />
+          <Route path="tarifas" element={<TarifasPage />} />
           <Route path="facturas" element={<FacturasPage />} />
           <Route path="usuarios" element={<UsuariosPage />} />
         </Route>
