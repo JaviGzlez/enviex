@@ -111,6 +111,7 @@ function NewShipmentModal({ defaultDate, companies, profileId, onClose, onCreate
   const [serviceType, setServiceType] = useState("");
   const [concept, setConcept] = useState("");
   const [price, setPrice] = useState("");
+  const [suggestedPrice, setSuggestedPrice] = useState(null);
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -122,7 +123,10 @@ function NewShipmentModal({ defaultDate, companies, profileId, onClose, onCreate
 
   // Al elegir empresa + tipo, proponemos el precio pactado si existe
   useEffect(() => {
-    if (!companyId || !serviceType) return;
+    if (!companyId || !serviceType) {
+      setSuggestedPrice(null);
+      return;
+    }
     supabase
       .from("company_rates")
       .select("price")
@@ -130,7 +134,12 @@ function NewShipmentModal({ defaultDate, companies, profileId, onClose, onCreate
       .eq("service_type", serviceType)
       .maybeSingle()
       .then(({ data }) => {
-        if (data) setPrice(data.price);
+        if (data) {
+          setPrice(data.price);
+          setSuggestedPrice(data.price);
+        } else {
+          setSuggestedPrice(null);
+        }
       });
   }, [companyId, serviceType]);
 
@@ -201,6 +210,12 @@ function NewShipmentModal({ defaultDate, companies, profileId, onClose, onCreate
               <option key={t.name} value={t.name}>{t.name}</option>
             ))}
           </select>
+
+          {suggestedPrice !== null && (
+            <p className="-mt-1 text-xs font-bold text-green-700">
+              Tarifa pactada para esta empresa: {Number(suggestedPrice).toFixed(2)} €
+            </p>
+          )}
 
           <input
             value={concept}

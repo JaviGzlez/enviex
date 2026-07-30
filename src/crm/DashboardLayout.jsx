@@ -24,7 +24,7 @@ export default function DashboardLayout() {
     <div className="flex min-h-screen bg-slate-50">
       <aside className="flex w-52 flex-shrink-0 flex-col justify-between border-r border-slate-200 bg-white p-4">
         <div>
-          <div className="mb-6 px-1 text-lg font-black text-[#092640]">enviex</div>
+          <img src="/logo-enviex.png" alt="Enviex" className="mb-6 h-12 w-12 rounded-full" />
           <nav className="flex flex-col gap-1">
             <NavLink to="/crm" end className={navItemClass}>
               <Truck size={18} /> Envíos
