@@ -121,22 +121,36 @@ function NewShipmentModal({ defaultDate, companies, profileId, onClose, onCreate
       .then(({ data }) => setServiceTypes(data || []));
   }, []);
 
-  // Al elegir empresa + tipo, proponemos el precio pactado si existe
+  // Al elegir empresa + tipo, proponemos el precio: primero miramos si hay uno
+  // pactado específicamente con esa empresa, y si no, usamos el precio general del catálogo
   useEffect(() => {
     if (!companyId || !serviceType) {
       setSuggestedPrice(null);
       return;
     }
+
     supabase
       .from("company_rates")
       .select("price")
       .eq("company_id", companyId)
       .eq("service_type", serviceType)
       .maybeSingle()
-      .then(({ data }) => {
-        if (data) {
-          setPrice(data.price);
-          setSuggestedPrice(data.price);
+      .then(async ({ data: companyRate }) => {
+        if (companyRate) {
+          setPrice(companyRate.price);
+          setSuggestedPrice({ value: companyRate.price, source: "pactada" });
+          return;
+        }
+
+        const { data: catalogRate } = await supabase
+          .from("service_types")
+          .select("default_price")
+          .eq("name", serviceType)
+          .maybeSingle();
+
+        if (catalogRate) {
+          setPrice(catalogRate.default_price);
+          setSuggestedPrice({ value: catalogRate.default_price, source: "general" });
         } else {
           setSuggestedPrice(null);
         }
@@ -213,7 +227,9 @@ function NewShipmentModal({ defaultDate, companies, profileId, onClose, onCreate
 
           {suggestedPrice !== null && (
             <p className="-mt-1 text-xs font-bold text-green-700">
-              Tarifa pactada para esta empresa: {Number(suggestedPrice).toFixed(2)} €
+              {suggestedPrice.source === "pactada"
+                ? `Tarifa pactada para esta empresa: ${Number(suggestedPrice.value).toFixed(2)} €`
+                : `Precio general de tarifas (sin precio pactado para esta empresa): ${Number(suggestedPrice.value).toFixed(2)} €`}
             </p>
           )}
 
